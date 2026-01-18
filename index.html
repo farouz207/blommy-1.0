@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blommy Interactive - Jeu entre amis</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Emoji Picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.14.0/dist/emoji-picker.min.css">
+    <!-- Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Écran d'accueil -->
+    <div id="welcome-screen" class="screen active">
+        <div class="container">
+            <h1><i class="fas fa-gamepad"></i> Blommy Interactive</h1>
+            <p class="subtitle">Jeu + Chat + Médias entre amis</p>
+            
+            <div class="card">
+                <h2><i class="fas fa-user-plus"></i> Commencer</h2>
+                
+                <div class="input-group">
+                    <input type="text" id="player-name" placeholder="Ton prénom" class="input" maxlength="20">
+                    <input type="file" id="avatar-input" accept="image/*" style="display: none;">
+                    <button id="change-avatar" class="btn-small">
+                        <i class="fas fa-camera"></i> Avatar
+                    </button>
+                    <div id="avatar-preview" class="avatar-small"></div>
+                </div>
+                
+                <div class="button-group">
+                    <button id="create-game-btn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Créer une partie
+                    </button>
+                    <button id="join-game-btn" class="btn btn-secondary">
+                        <i class="fas fa-sign-in-alt"></i> Rejoindre
+                    </button>
+                </div>
+                
+                <div id="join-section" style="display: none;">
+                    <div class="input-group">
+                        <input type="text" id="game-code" placeholder="Code de la partie (6 lettres)" class="input" maxlength="6" style="text-transform: uppercase;">
+                    </div>
+                    <button id="confirm-join-btn" class="btn btn-success">
+                        <i class="fas fa-play"></i> Jouer !
+                    </button>
+                </div>
+            </div>
+            
+            <div class="instructions">
+                <h3><i class="fas fa-info-circle"></i> Fonctionnalités :</h3>
+                <div class="features-grid">
+                    <div class="feature">
+                        <i class="fas fa-comment-alt"></i>
+                        <span>Chat en temps réel</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-microphone"></i>
+                        <span>Messages audio</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-image"></i>
+                        <span>Photos/vidéos</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-video"></i>
+                        <span>Caméra directe</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-poll"></i>
+                        <span>Sondages rapides</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fas fa-gift"></i>
+                        <span>1000+ questions</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Écran de la partie -->
+    <div id="game-screen" class="screen">
+        <div class="game-container">
+            <!-- Colonne de gauche : Jeu principal -->
+            <div class="game-main">
+                <div class="game-header">
+                    <div class="game-info">
+                        <div id="game-code-display" class="game-code"></div>
+                        <div id="player-count" class="player-count">
+                            <i class="fas fa-users"></i> <span id="count">1</span>
+                        </div>
+                        <button id="show-players" class="btn-small">
+                            <i class="fas fa-list"></i> Joueurs
+                        </button>
+                    </div>
+                    <button id="leave-game" class="btn-small btn-danger">
+                        <i class="fas fa-sign-out-alt"></i> Quitter
+                    </button>
+                </div>
+                
+                <div class="game-card">
+                    <div id="question-container">
+                        <div class="question-header">
+                            <i class="fas fa-question-circle"></i>
+                            <span>Question #<span id="question-number">1</span></span>
+                        </div>
+                        <div id="current-question" class="question-text">
+                            En attente des joueurs...
+                        </div>
+                        <div id="target-player" class="target-player">
+                            <i class="fas fa-user"></i> <span>Chargement...</span>
+                        </div>
+                        
+                        <!-- Timer pour répondre -->
+                        <div class="timer-container">
+                            <div class="timer-circle">
+                                <svg width="60" height="60">
+                                    <circle cx="30" cy="30" r="28" stroke="#e0e0e0" stroke-width="4" fill="none"/>
+                                    <circle id="timer-circle" cx="30" cy="30" r="28" stroke="#667eea" stroke-width="4" fill="none" 
+                                            stroke-dasharray="176" stroke-dashoffset="0" transform="rotate(-90 30 30)"/>
+                                </svg>
+                                <div id="timer-text" class="timer-text">60</div>
+                            </div>
+                            <div class="timer-label">Temps pour répondre</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Zone de réponse multimédia -->
+                    <div class="response-section">
+                        <h3><i class="fas fa-reply"></i> Ta réponse :</h3>
+                        <div class="response-tools">
+                            <button id="record-audio" class="response-btn" title="Enregistrer audio">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                            <button id="take-photo" class="response-btn" title="Prendre une photo">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                            <button id="record-video" class="response-btn" title="Enregistrer vidéo">
+                                <i class="fas fa-video"></i>
+                            </button>
+                            <button id="upload-file" class="response-btn" title="Uploader fichier">
+                                <i class="fas fa-upload"></i>
+                            </button>
+                            <button id="add-emoji" class="response-btn" title="Ajouter emoji">
+                                <i class="far fa-smile"></i>
+                            </button>
+                            <button id="send-gif" class="response-btn" title="Envoyer GIF">
+                                <i class="fas fa-film"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Zone de texte avec emojis -->
+                        <div class="response-input-container">
+                            <div class="emoji-picker-container" style="display: none;">
+                                <emoji-picker></emoji-picker>
+                            </div>
+                            <div class="text-input-wrapper">
+                                <textarea id="text-response" placeholder="Écris ta réponse ici... Ou utilise les boutons ci-dessus !" 
+                                          class="response-input"></textarea>
+                                <button id="send-text-response" class="send-btn">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Prévisualisation média -->
+                        <div id="media-preview" class="media-preview" style="display: none;">
+                            <div class="preview-header">
+                                <span>Prévisualisation</span>
+                                <button id="clear-preview" class="btn-small">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div id="preview-content"></div>
+                            <button id="send-media" class="btn btn-primary">
+                                <i class="fas fa-share"></i> Envoyer cette réponse
+                            </button>
+                        </div>
+                        
+                        <!-- Enregistrement audio -->
+                        <div id="audio-recorder" class="audio-recorder" style="display: none;">
+                            <div class="recorder-header">
+                                <i class="fas fa-microphone"></i>
+                                <span>Enregistrement audio</span>
+                            </div>
+                            <div class="recorder-controls">
+                                <div id="audio-visualizer" class="visualizer"></div>
+                                <div class="recorder-time">
+                                    <span id="recording-time">00:00</span>
+                                </div>
+                                <div class="recorder-buttons">
+                                    <button id="start-recording" class="btn-record">
+                                        <i class="fas fa-circle"></i> Démarrer
+                                    </button>
+                                    <button id="stop-recording" class="btn-record btn-stop" disabled>
+                                        <i class="fas fa-square"></i> Arrêter
+                                    </button>
+                                    <button id="play-recording" class="btn-record" disabled>
+                                        <i class="fas fa-play"></i> Écouter
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Colonne de droite : Chat et réponses -->
+            <div class="game-sidebar">
+                <div class="sidebar-header">
+                    <h3><i class="fas fa-comments"></i> Réponses & Chat</h3>
+                    <div class="sidebar-tabs">
+                        <button class="tab-btn active" data-tab="responses">
+                            <i class="fas fa-reply-all"></i> Réponses
+                        </button>
+                        <button class="tab-btn" data-tab="chat">
+                            <i class="fas fa-comment"></i> Chat
+                        </button>
+                        <button class="tab-btn" data-tab="gallery">
+                            <i class="fas fa-images"></i> Galerie
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Onglet Réponses -->
+                <div id="responses-tab" class="tab-content active">
+                    <div class="responses-container">
+                        <!-- Les réponses apparaîtront ici dynamiquement -->
+                        <div class="no-responses" id="no-responses">
+                            <i class="fas fa-comment-slash"></i>
+                            <p>Aucune réponse encore. Sois le premier !</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Onglet Chat -->
+                <div id="chat-tab" class="tab-content">
+                    <div class="chat-container">
+                        <div class="chat-messages" id="chat-messages">
+                            <!-- Messages de chat apparaîtront ici -->
+                        </div>
+                        <div class="chat-input">
+                            <input type="text" id="chat-input" placeholder="Écris un message..." class="chat-text-input">
+                            <button id="send-chat" class="chat-send-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Onglet Galerie -->
+                <div id="gallery-tab" class="tab-content">
+                    <div class="gallery-container" id="gallery-container">
+                        <!-- Les médias apparaîtront ici -->
+                        <div class="no-media" id="no-media">
+                            <i class="fas fa-images"></i>
+                            <p>Aucun média partagé encore</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Liste des joueurs (popup) -->
+                <div id="players-popup" class="popup-overlay" style="display: none;">
+                    <div class="popup-content">
+                        <div class="popup-header">
+                            <h3><i class="fas fa-users"></i> Joueurs en ligne</h3>
+                            <button class="close-popup">&times;</button>
+                        </div>
+                        <div class="players-list-popup">
+                            <ul id="players-list-details"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Caméra/Photo Overlay -->
+    <div id="camera-overlay" class="overlay" style="display: none;">
+        <div class="camera-container">
+            <div class="camera-header">
+                <h3><i class="fas fa-camera"></i> Prendre une photo/vidéo</h3>
+                <button class="close-camera">&times;</button>
+            </div>
+            <div class="camera-preview">
+                <video id="camera-video" autoplay playsinline></video>
+                <canvas id="camera-canvas" style="display: none;"></canvas>
+                <div id="camera-output"></div>
+            </div>
+            <div class="camera-controls">
+                <button id="switch-camera" class="camera-btn">
+                    <i class="fas fa-sync-alt"></i> Caméra
+                </button>
+                <button id="capture-photo" class="camera-btn btn-primary">
+                    <i class="fas fa-camera"></i> Photo
+                </button>
+                <button id="capture-video" class="camera-btn btn-danger">
+                    <i class="fas fa-video"></i> Vidéo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import des scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.14.0/dist/emoji-picker.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
